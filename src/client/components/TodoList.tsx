@@ -1,6 +1,8 @@
-import type { SVGProps } from 'react'
+import type { TCurrentStatus } from '@/pages'
 
+import { type SVGProps } from 'react'
 import * as Checkbox from '@radix-ui/react-checkbox'
+import { useAutoAnimate } from '@formkit/auto-animate/react'
 
 import { api } from '@/utils/client/api'
 
@@ -63,28 +65,111 @@ import { api } from '@/utils/client/api'
  *  - https://auto-animate.formkit.com
  */
 
-export const TodoList = () => {
+interface ItoDoItem {
+  id: number
+  status: 'completed' | 'pending'
+  body: string
+}
+
+interface StatusProps {
+  status: TCurrentStatus
+}
+
+type TStatus = {
+  '0': ('completed' | 'pending')[]
+  '1': ('completed' | 'pending')[]
+  '2': ('completed' | 'pending')[]
+}
+
+const statusConfig: TStatus = {
+  '0': ['completed', 'pending'],
+  '1': ['pending'],
+  '2': ['completed'],
+}
+
+export const TodoList: React.FC<StatusProps> = ({ status }) => {
+  const [animationParent] = useAutoAnimate()
+
   const { data: todos = [] } = api.todo.getAll.useQuery({
-    statuses: ['completed', 'pending'],
+    statuses: statusConfig[status],
   })
 
+  const apiContext = api.useContext()
+
+  const { mutate: updateTodoStatus } = api.todoStatus.update.useMutation({
+    onSuccess: () => {
+      apiContext.todo.getAll.refetch()
+    },
+  })
+
+  const { mutate: deleteTodo } = api.todo.delete.useMutation({
+    onSuccess: () => {
+      apiContext.todo.getAll.refetch()
+    },
+  })
+
+  const onChangeStatus = (checked: boolean, item: ItoDoItem) => {
+    updateTodoStatus({
+      todoId: item.id,
+      status: checked ? 'completed' : 'pending',
+    })
+  }
+
+  const onDeleteItem = (item: ItoDoItem) => {
+    deleteTodo({
+      id: item.id,
+    })
+  }
+
   return (
-    <ul className="grid grid-cols-1 gap-y-3">
+    <ul ref={animationParent} className="grid grid-cols-1 gap-y-3">
       {todos.map((todo) => (
         <li key={todo.id}>
-          <div className="flex items-center rounded-12 border border-gray-200 px-4 py-3 shadow-sm">
-            <Checkbox.Root
-              id={String(todo.id)}
-              className="flex h-6 w-6 items-center justify-center rounded-6 border border-gray-300 focus:border-gray-700 focus:outline-none data-[state=checked]:border-gray-700 data-[state=checked]:bg-gray-700"
-            >
-              <Checkbox.Indicator>
-                <CheckIcon className="h-4 w-4 text-white" />
-              </Checkbox.Indicator>
-            </Checkbox.Root>
+          <div
+            className={`
+          flex 
+          flex-row
+          items-center 
+          justify-between 
+          rounded-12 
+          border
+          border-gray-200 
+          px-4 
+          py-3 
+          ${todo.status === 'completed' ? 'bg-gray-50' : ''}
+          shadow-sm`}
+          >
+            <div className="flex flex-1 flex-row items-center overflow-hidden">
+              <Checkbox.Root
+                onCheckedChange={(e: boolean) => onChangeStatus(e, todo)}
+                checked={todo.status === 'completed' ? true : false}
+                id={String(todo.id)}
+                className={`flex h-6 w-6 items-center justify-center rounded-6 border border-gray-300 focus:border-gray-700 focus:outline-none data-[state=checked]:border-gray-700 data-[state=checked]:bg-gray-700`}
+              >
+                <Checkbox.Indicator>
+                  <CheckIcon className="h-4 w-4 text-white" />
+                </Checkbox.Indicator>
+              </Checkbox.Root>
 
-            <label className="block pl-3 font-medium" htmlFor={String(todo.id)}>
-              {todo.body}
-            </label>
+              <label
+                className={`
+              block 
+              w-full 
+              overflow-hidden
+              text-ellipsis 
+              pl-3
+              font-medium
+              ${todo.status === 'completed' ? 'text-gray-500 line-through' : ''}
+              `}
+                htmlFor={String(todo.id)}
+              >
+                {todo.body}
+              </label>
+            </div>
+            <XMarkIcon
+              onClick={() => onDeleteItem(todo)}
+              className="h-6 w-6 cursor-pointer text-gray-700"
+            />
           </div>
         </li>
       ))}

@@ -35,8 +35,22 @@ export const CreateTodoForm = () => {
       },
     })
 
+  /** Question 2: By using onFormSubmit, setting type of button to "submit" and setting onSubmit of form that will enable keyboard accessible  */
+  const onFormSubmit = () => {
+    //Empty todoBody do not create
+    if (todoBody !== '') {
+      createTodo({
+        body: todoBody,
+      })
+    }
+    setTodoBody('')
+  }
+
   return (
-    <form className="group flex items-center justify-between rounded-12 border border-gray-200 py-2 pr-4 focus-within:border-gray-400">
+    <form
+      onSubmit={onFormSubmit}
+      className="group flex items-center justify-between rounded-12 border border-gray-200 py-2 pr-3 focus-within:border-gray-400"
+    >
       <label htmlFor={TODO_INPUT_ID} className="sr-only">
         Add todo
       </label>
@@ -53,14 +67,16 @@ export const CreateTodoForm = () => {
       />
 
       <button
-        type="button"
+        type="submit"
+        className={`
+          rounded-full
+          bg-gray-700
+          px-5
+          py-2
+          text-sm
+          text-white
+        `}
         disabled={isCreatingTodo}
-        onClick={() => {
-          createTodo({
-            body: todoBody,
-          })
-          setTodoBody('')
-        }}
       >
         Add
       </button>
